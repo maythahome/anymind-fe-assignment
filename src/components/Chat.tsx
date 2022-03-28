@@ -1,6 +1,12 @@
 import styled from "@emotion/styled";
 import { useQuery } from "features/index";
-import { GET_LATEST_MESSAGES } from "features/chat";
+import {
+  FetchLatestMessagesData,
+  FetchLatestMessagesVars,
+  fetchMoreMessages,
+  GET_LATEST_MESSAGES,
+  Message,
+} from "features/chat";
 import { useEffect, useState } from "react";
 
 const ChatBody = styled.div({
@@ -74,16 +80,20 @@ const ChatStatus = styled.div({});
 const Chat = () => {
   const [currentUser, setCurrentUser] = useState<string>("Joyse");
   const [channelId, setChannelId] = useState<string>("General");
-  // const [messages, setMessages] = useState<any>([]);
 
-  const {
-    loading,
-    error,
-    data: { fetchLatestMessages: messsages = [] } = {},
-    refetch,
-  } = useQuery(GET_LATEST_MESSAGES, {
-    variables: { channelId },
-  });
+  const { error, data: { fetchLatestMessages: messsageList = [] } = {} } =
+    useQuery<FetchLatestMessagesData, FetchLatestMessagesVars>(
+      GET_LATEST_MESSAGES,
+      {
+        variables: { channelId },
+      }
+    );
+
+  const [messages, setMessages] = useState<Message[]>(messsageList);
+
+  useEffect(() => {
+    setMessages(messsageList);
+  }, [messsageList, channelId]);
 
   const handleUserChange = (user: string) => {
     setCurrentUser(user);
@@ -93,8 +103,26 @@ const Chat = () => {
     setChannelId(channelId);
   };
 
-  const nosorted = [...messsages];
-  const sorted = nosorted.sort((a, b) => b.timestamp - a.timestamp);
+  const handleReadMoreClick = async (old: boolean) => {
+    if (sorted.length === 0) return;
+    const messageId = !old
+      ? sorted[0]?.messageId
+      : sorted[sorted.length - 1].messageId;
+    const moreMessages = await fetchMoreMessages(channelId, messageId, old);
+
+    if (!old) {
+      const curMessages = [...moreMessages, ...messages];
+      setMessages(curMessages);
+      return;
+    }
+    const curMessages = [...messages, ...moreMessages];
+    setMessages(curMessages);
+  };
+
+  const nosorted = [...messages];
+  const sorted = nosorted.sort(
+    (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
+  );
 
   return (
     <ChatBody className="body">
@@ -124,7 +152,12 @@ const Chat = () => {
           GTM Channel
         </ChatChannelNameHolder>
         <ChatWindow className="messages-wrapper">
-          <button className="Read More">Read more</button>
+          <button
+            className="Read More"
+            onClick={() => handleReadMoreClick(true)}
+          >
+            Read more
+          </button>
           {sorted?.map((message: any) => {
             return (
               <MessageRow messageRight={message.userId === currentUser}>
@@ -134,7 +167,12 @@ const Chat = () => {
               </MessageRow>
             );
           })}
-          <button className="Read More">Read more</button>
+          <button
+            className="Read More"
+            onClick={() => handleReadMoreClick(false)}
+          >
+            Read more
+          </button>
         </ChatWindow>
         <ChatControlHolder className="message">
           <TextArea></TextArea>
