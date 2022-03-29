@@ -8,13 +8,27 @@ import {
   Message,
 } from "features/chat";
 import { useEffect, useState } from "react";
+import Image, { StaticImageData } from "next/image";
+import SamPic from "assets/logo/Sam.png";
+import JoysePic from "assets/logo/Joyse.png";
+import RussellPic from "assets/logo/Russell.png";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowUp,
+  faArrowDown,
+  faPaperPlane,
+} from "@fortawesome/free-solid-svg-icons";
 
+const imageMapper: { [key: string]: StaticImageData } = {
+  Joyse: JoysePic,
+  Sam: SamPic,
+  Russell: RussellPic,
+};
 const ChatBody = styled.div({
   display: "inline-flex",
   width: "100%",
   flexWrap: "nowrap",
   backgroundColor: "#f4f5fa",
-  height: "100%",
 });
 
 const ChatSideNav = styled.div({
@@ -50,7 +64,8 @@ const ChatChannelNameHolder = styled.div({
 });
 
 const ChatWindow = styled.div({
-  minHeight: "70vh",
+  minHeight: "60vh",
+  padding: "1rem",
 });
 
 const TextArea = styled.textarea({
@@ -67,22 +82,70 @@ const TextArea = styled.textarea({
   border: " px solid #ced4da",
   borderRadius: "0.25rem",
   transition: "border-color .15s ease-in-out,box-shadow .15s ease-in-out",
+  marginBottom: "10px",
 });
 
 const ChatControlHolder = styled.div({
   padding: "0.375rem 0.75rem",
 });
 
-const ChatMessage = styled.div({
-  backgroundColor: "#FFF",
+const MessageRow = styled.div<{ messageRight: boolean }>((props) => {
+  return {
+    display: "flex",
+    justifyContent: props.messageRight ? "flex-end" : "flex-start",
+    flex: "1",
+    marginBottom: "40px",
+    ".chat-message": {
+      backgroundColor: "#FFF",
+      padding: "0.4rem 1rem",
+      borderRadius: "4px",
+      fontWeight: 300,
+      minHeight: "50px",
+      position: "relative",
+      ":before": {
+        content: "''",
+        position: "absolute",
+        border: "10px solid",
+        top: "10px",
+      },
+    },
+    ".message-right": {
+      flexDirection: "row-reverse",
+      ".avatar-holder": {
+        marginLeft: "20px",
+      },
+      ".chat-message": {
+        textAlign: "right",
+        ":before": {
+          right: "-20px",
+          borderColor: "transparent transparent transparent #ffffff",
+        },
+      },
+    },
+    ".message-left": {
+      ".avatar-holder": {
+        marginRight: "20px",
+      },
+      ".chat-message": {
+        ":before": {
+          left: "-20px",
+          borderColor: "transparent #ffffff transparent transparent",
+        },
+      },
+    },
+    ".message-sender": {
+      color: "#999999",
+      fontSize: ".75rem",
+      textAlign: "center",
+    },
+
+    ".chat-status": {
+      color: "#999999",
+      fontSize: ".75rem",
+      textAlign: "center",
+    },
+  };
 });
-
-const MessageRow = styled.div<{ messageRight: boolean }>((props) => ({
-  display: "flex",
-  justifyContent: props.messageRight ? "flex-end" : "flex-start",
-}));
-
-const ChatStatus = styled.div({});
 
 const Select = styled.select({
   width: "100%",
@@ -93,11 +156,23 @@ const Select = styled.select({
 });
 
 const Button = styled.button({
+  fontSize: "1rem",
   padding: "8px 10px",
   backgroundColor: "#17a2b8",
   color: "#FFF",
   border: "none",
   borderRadius: "4px",
+});
+
+const MessageWrapper = styled.div({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const MessageHolder = styled.div({
+  height: "500px",
+  overflowY: "scroll",
 });
 
 const Chat = () => {
@@ -127,10 +202,10 @@ const Chat = () => {
   };
 
   const handleReadMoreClick = async (old: boolean) => {
-    if (sorted.length === 0) return;
+    if (sortedMsgs.length === 0) return;
     const messageId = !old
-      ? sorted[0]?.messageId
-      : sorted[sorted.length - 1].messageId;
+      ? sortedMsgs[0]?.messageId
+      : sortedMsgs[sortedMsgs.length - 1].messageId;
     const moreMessages = await fetchMoreMessages(channelId, messageId, old);
 
     if (!old) {
@@ -143,22 +218,28 @@ const Chat = () => {
   };
 
   const nosorted = [...messages];
-  const sorted = nosorted.sort(
+  let sortedMsgs = nosorted.sort(
     (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
   );
 
-  const temp = [
+  sortedMsgs = [
     {
-      messageId: "123123123123",
-      text: "Hi",
-      datetime: "2021-01-02",
+      messageId: "test",
+      text: "Hellow I'm tehe best fsdfasdf",
+      datetime: "test",
       userId: "Joyse",
     },
     {
-      messageId: "123123123123",
-      text: "Hi",
-      datetime: "2021-01-02",
+      messageId: "test2",
+      text: "Lorem ipsum fs;foef[asdf",
+      datetime: "test",
       userId: "Sam",
+    },
+    {
+      messageId: "test3",
+      text: "sd;lfk;lsdf;lask;dfksdfpspk",
+      datetime: "test",
+      userId: "Russell",
     },
   ];
 
@@ -195,43 +276,69 @@ const Chat = () => {
 
       <ChatRightSide className="chat-window">
         <ChatChannelNameHolder className="chat-channel-name">
-          GTM Channel
+          {channelId}
         </ChatChannelNameHolder>
-        <ChatWindow className="messages-wrapper">
-          <Button
-            className="Read More"
-            onClick={() => handleReadMoreClick(true)}
-          >
-            Read more
-          </Button>
-          {/* {sorted?.map((message: any) => {
-            return (
-              <MessageRow messageRight={message.userId === currentUser}>
-                <div>{message.userId}</div>
-                <ChatMessage>{message.text}</ChatMessage>
-                <ChatStatus>{message.datetime}</ChatStatus>
-              </MessageRow>
-            );
-          })} */}
-          {temp?.map((message: any) => {
-            return (
-              <MessageRow messageRight={message.userId === currentUser}>
-                <div>{message.userId}</div>
-                <ChatMessage>{message.text}</ChatMessage>
-                <ChatStatus>{message.datetime}</ChatStatus>
-              </MessageRow>
-            );
-          })}
-          <Button
-            className="Read More"
-            onClick={() => handleReadMoreClick(false)}
-          >
-            Read more
-          </Button>
+        <ChatWindow>
+          <div>
+            <Button
+              className="Read More"
+              onClick={() => handleReadMoreClick(true)}
+              style={{ marginBottom: "5px" }}
+            >
+              Read more
+              <FontAwesomeIcon icon={faArrowUp} style={{ marginLeft: "8px" }} />
+            </Button>
+          </div>
+          <MessageHolder>
+            {sortedMsgs?.map((message: Message) => {
+              const isRight = message.userId === currentUser;
+              return (
+                <MessageRow
+                  messageRight={isRight}
+                  key={`message_${message.messageId}`}
+                >
+                  <MessageWrapper
+                    className={`message-${isRight ? "right" : "left"}`}
+                  >
+                    <div className="avatar-holder">
+                      <Image
+                        src={imageMapper[message.userId]}
+                        alt={`pic of ${message.userId}`}
+                        width="48px"
+                        height="48px"
+                      />
+                      <div className="message-sender">{message.userId}</div>
+                    </div>
+                    <div className="chat-message">{message.text}</div>
+                    <div className="chat-status">{message.datetime}</div>
+                  </MessageWrapper>
+                </MessageRow>
+              );
+            })}
+          </MessageHolder>
+          <div>
+            <Button
+              className="Read More"
+              onClick={() => handleReadMoreClick(false)}
+              style={{ marginTop: "5px" }}
+            >
+              Read more
+              <FontAwesomeIcon
+                icon={faArrowDown}
+                style={{ marginLeft: "8px" }}
+              />
+            </Button>
+          </div>
         </ChatWindow>
         <ChatControlHolder className="message">
           <TextArea></TextArea>
-          <Button>Send Message</Button>
+          <Button>
+            Send Message
+            <FontAwesomeIcon
+              icon={faPaperPlane}
+              style={{ marginLeft: "8px" }}
+            />
+          </Button>
         </ChatControlHolder>
       </ChatRightSide>
     </ChatBody>

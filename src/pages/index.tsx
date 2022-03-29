@@ -5,7 +5,6 @@ import Chat from "components/Chat";
 
 const PageContainer = styled.div({
   minHeight: "100vh",
-  padding: "2rem 0",
   display: "flex",
   maxWidth: "80vw",
   margin: "auto",
@@ -20,6 +19,14 @@ const ChatWrapper = styled.div({
 
 const ChatHeader = styled.div({
   width: "100%",
+  h5: {
+    fontSize: "1.25rem",
+    fontWeight: 500,
+    marginBottom: "0.5rem",
+  },
+  p: {
+    marginTop: 0,
+  },
 });
 
 const Home: NextPage = () => {
@@ -31,7 +38,7 @@ const Home: NextPage = () => {
 
       <ChatWrapper className="wrapper">
         <ChatHeader>
-          <b>1 day chat App</b>
+          <h5>1 day chat App</h5>
           <p>All messages will be deleted at every 00:00 UTC</p>
         </ChatHeader>
         <Chat />
