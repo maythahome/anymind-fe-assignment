@@ -25,6 +25,23 @@ export const GET_LATEST_MESSAGES = gql`
   }
 `;
 
+export interface PostMessagePayload {
+  channelId: string;
+  text: string;
+  userId: string;
+}
+
+export const POST_MESSAGE = gql`
+  mutation postMessage($channelId: String!, $text: String!, $userId: String!) {
+    postMessages(channelId: $channelId, text: $text, userId: $userId) {
+      messageId
+      datetime
+      text
+      userId
+    }
+  }
+`;
+
 export const fetchMoreMessages = async (
   channelId: string,
   messageId: string,

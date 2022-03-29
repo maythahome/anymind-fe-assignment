@@ -1,11 +1,13 @@
 import styled from "@emotion/styled";
-import { useQuery } from "features/index";
+import { useMutation, useQuery } from "features/index";
 import {
   FetchLatestMessagesData,
   FetchLatestMessagesVars,
   fetchMoreMessages,
   GET_LATEST_MESSAGES,
   Message,
+  PostMessagePayload,
+  POST_MESSAGE,
 } from "features/chat";
 import { useEffect, useState } from "react";
 import Image, { StaticImageData } from "next/image";
@@ -178,19 +180,29 @@ const MessageHolder = styled.div({
 const Chat = () => {
   const [currentUser, setCurrentUser] = useState<string>("Joyse");
   const [channelId, setChannelId] = useState<string>("General");
-
-  const { error, data: { fetchLatestMessages: messsageList = [] } = {} } =
-    useQuery<FetchLatestMessagesData, FetchLatestMessagesVars>(
-      GET_LATEST_MESSAGES,
-      {
-        variables: { channelId },
-      }
-    );
-
+  const {
+    error: fetchMsgError,
+    data: { fetchLatestMessages: messsageList = [] } = {},
+  } = useQuery<FetchLatestMessagesData, FetchLatestMessagesVars>(
+    GET_LATEST_MESSAGES,
+    {
+      variables: { channelId },
+    }
+  );
   const [messages, setMessages] = useState<Message[]>(messsageList);
 
+  const [postMessage, { error }] =
+    useMutation<{ postMessage: PostMessagePayload }>(POST_MESSAGE);
+  console.log(error);
   useEffect(() => {
-    if (!error) setMessages(messsageList);
+    if (!fetchMsgError) {
+      const nosorted = [...messsageList];
+      const sortedMsgs = nosorted.sort(
+        (a, b) =>
+          new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+      );
+      setMessages(sortedMsgs);
+    }
   }, [messsageList, channelId]);
 
   const handleUserChange = (user: string) => {
@@ -202,46 +214,36 @@ const Chat = () => {
   };
 
   const handleReadMoreClick = async (old: boolean) => {
-    if (sortedMsgs.length === 0) return;
+    if (messages.length === 0) return;
     const messageId = !old
-      ? sortedMsgs[0]?.messageId
-      : sortedMsgs[sortedMsgs.length - 1].messageId;
+      ? messages[messages.length - 1].messageId
+      : messages[0]?.messageId;
     const moreMessages = await fetchMoreMessages(channelId, messageId, old);
 
     if (!old) {
-      const curMessages = [...moreMessages, ...messages];
+      const curMessages = [...messages, ...moreMessages];
       setMessages(curMessages);
       return;
     }
-    const curMessages = [...messages, ...moreMessages];
+    const curMessages = [...moreMessages, ...messages];
     setMessages(curMessages);
   };
 
-  const nosorted = [...messages];
-  let sortedMsgs = nosorted.sort(
-    (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
-  );
-
-  sortedMsgs = [
-    {
-      messageId: "test",
-      text: "Hellow I'm tehe best fsdfasdf",
-      datetime: "test",
-      userId: "Joyse",
-    },
-    {
-      messageId: "test2",
-      text: "Lorem ipsum fs;foef[asdf",
-      datetime: "test",
-      userId: "Sam",
-    },
-    {
-      messageId: "test3",
-      text: "sd;lfk;lsdf;lask;dfksdfpspk",
-      datetime: "test",
-      userId: "Russell",
-    },
-  ];
+  const handleMsgSend = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    const target = e.target as typeof e.target & {
+      msg: { value: string };
+    };
+    const msg = target.msg.value;
+    postMessage({
+      variables: {
+        channelId,
+        text: msg,
+        userId: currentUser,
+      },
+      errorPolicy: "all",
+    });
+  };
 
   return (
     <ChatBody className="body">
@@ -290,7 +292,7 @@ const Chat = () => {
             </Button>
           </div>
           <MessageHolder>
-            {sortedMsgs?.map((message: Message) => {
+            {messages?.map((message: Message) => {
               const isRight = message.userId === currentUser;
               return (
                 <MessageRow
@@ -331,14 +333,16 @@ const Chat = () => {
           </div>
         </ChatWindow>
         <ChatControlHolder className="message">
-          <TextArea></TextArea>
-          <Button>
-            Send Message
-            <FontAwesomeIcon
-              icon={faPaperPlane}
-              style={{ marginLeft: "8px" }}
-            />
-          </Button>
+          <form onSubmit={handleMsgSend}>
+            <TextArea name="msg" />
+            <Button type="submit">
+              Send Message
+              <FontAwesomeIcon
+                icon={faPaperPlane}
+                style={{ marginLeft: "8px" }}
+              />
+            </Button>
+          </form>
         </ChatControlHolder>
       </ChatRightSide>
     </ChatBody>

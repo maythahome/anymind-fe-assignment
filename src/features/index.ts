@@ -4,6 +4,7 @@ import {
   InMemoryCache,
   gql,
   useQuery,
+  useMutation,
 } from "@apollo/client";
 
 const client = new ApolloClient({
@@ -11,4 +12,4 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-export { ApolloProvider, client, gql, useQuery };
+export { ApolloProvider, client, gql, useQuery, useMutation };
