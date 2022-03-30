@@ -203,8 +203,12 @@ const MessageHolder = styled.div({
 
 const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesStartRef = useRef<HTMLDivElement>(null);
   const [currentUser, setCurrentUser] = useState<string>("Joyse");
   const [channelId, setChannelId] = useState<string>("General");
+  const [currentText, setCurrentText] = useState<string>("");
+  const [scrollTop, setScrollTop] = useState<boolean>(false);
+
   const {
     loading: fetchMsgLoading,
     error: fetchMsgError,
@@ -217,8 +221,6 @@ const Chat = () => {
   );
   const [messages, setMessages] = useState<Message[]>(unsortedMsgs);
 
-  const [currentText, setCurrentText] = useState<string>("");
-
   const [postMessage] = useMutation<
     { postMessage: Message },
     PostMessagePayload
@@ -227,6 +229,12 @@ const Chat = () => {
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const scrollToTop = () => {
+    if (messagesStartRef.current) {
+      messagesStartRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
   useEffect(() => {
@@ -246,7 +254,12 @@ const Chat = () => {
   }, [unsortedMsgs, channelId]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (scrollTop) {
+      scrollToTop();
+      setScrollTop(false);
+    } else {
+      scrollToBottom();
+    }
   }, [messages]);
 
   const handleUserChange = (user: string) => {
@@ -263,15 +276,18 @@ const Chat = () => {
       ? messages[messages.length - 1].messageId
       : messages[0]?.messageId;
     const moreMessages = await fetchMoreMessages(channelId, messageId, old);
-
     if (!moreMessages) return;
 
-    if (!old) {
-      const curMessages = [...messages, ...moreMessages];
-      setMessages(curMessages);
-      return;
+    if (old) {
+      setScrollTop(true);
     }
-    const curMessages = [...moreMessages, ...messages];
+    const unsort = [...moreMessages];
+    const sorted = unsort.sort(
+      (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+    );
+    const curMessages = old
+      ? [...sorted, ...messages]
+      : [...messages, ...sorted];
     setMessages(curMessages);
   };
 
@@ -355,6 +371,7 @@ const Chat = () => {
             </Button>
           </div>
           <MessageHolder>
+            <div ref={messagesStartRef} />
             {messages?.map((message: Message, index) => {
               const isRight = message.userId === currentUser;
               return (
