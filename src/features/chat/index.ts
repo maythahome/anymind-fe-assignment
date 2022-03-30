@@ -5,6 +5,7 @@ export interface Message {
   text: string;
   datetime: string;
   userId: string;
+  failed?: boolean;
 }
 
 export interface FetchLatestMessagesData {
@@ -32,7 +33,7 @@ export interface PostMessagePayload {
 }
 
 export const POST_MESSAGE = gql`
-  mutation postMessage($channelId: String!, $text: String!, $userId: String!) {
+  mutation PostMessage($channelId: String!, $text: String!, $userId: String!) {
     postMessage(channelId: $channelId, text: $text, userId: $userId) {
       messageId
       datetime

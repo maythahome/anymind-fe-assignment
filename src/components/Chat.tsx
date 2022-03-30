@@ -9,7 +9,7 @@ import {
   PostMessagePayload,
   POST_MESSAGE,
 } from "features/chat";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image, { StaticImageData } from "next/image";
 import SamPic from "assets/logo/Sam.png";
 import JoysePic from "assets/logo/Joyse.png";
@@ -19,6 +19,8 @@ import {
   faArrowUp,
   faArrowDown,
   faPaperPlane,
+  faCheckCircle,
+  faCircleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 
 const imageMapper: { [key: string]: StaticImageData } = {
@@ -26,6 +28,15 @@ const imageMapper: { [key: string]: StaticImageData } = {
   Sam: SamPic,
   Russell: RussellPic,
 };
+
+function padTo2Digits(num: number) {
+  return String(num).padStart(2, "0");
+}
+
+const getHourMinute = (date: Date) => {
+  return `${padTo2Digits(date.getHours())}:${padTo2Digits(date.getMinutes())}`;
+};
+
 const ChatBody = styled.div({
   display: "inline-flex",
   width: "100%",
@@ -104,6 +115,9 @@ const MessageRow = styled.div<{ messageRight: boolean }>((props) => {
       fontWeight: 300,
       minHeight: "50px",
       position: "relative",
+      maxWidth: "450px",
+      whiteSpace: "pre-line",
+      wordBreak: "break-word",
       ":before": {
         content: "''",
         position: "absolute",
@@ -114,6 +128,7 @@ const MessageRow = styled.div<{ messageRight: boolean }>((props) => {
     ".message-right": {
       flexDirection: "row-reverse",
       ".avatar-holder": {
+        marginBottom: "auto",
         marginLeft: "20px",
       },
       ".chat-message": {
@@ -126,6 +141,7 @@ const MessageRow = styled.div<{ messageRight: boolean }>((props) => {
     },
     ".message-left": {
       ".avatar-holder": {
+        marginBottom: "auto",
         marginRight: "20px",
       },
       ".chat-message": {
@@ -145,6 +161,10 @@ const MessageRow = styled.div<{ messageRight: boolean }>((props) => {
       color: "#999999",
       fontSize: ".75rem",
       textAlign: "center",
+    },
+
+    ".chat-hour": {
+      fontSize: "0.80rem",
     },
   };
 });
@@ -182,40 +202,52 @@ const MessageHolder = styled.div({
 });
 
 const Chat = () => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentUser, setCurrentUser] = useState<string>("Joyse");
   const [channelId, setChannelId] = useState<string>("General");
   const {
     loading: fetchMsgLoading,
     error: fetchMsgError,
-    data: { fetchLatestMessages: messsageList = [] } = {},
+    data: { fetchLatestMessages: unsortedMsgs = [] } = {},
   } = useQuery<FetchLatestMessagesData, FetchLatestMessagesVars>(
     GET_LATEST_MESSAGES,
     {
       variables: { channelId },
     }
   );
-  const [messages, setMessages] = useState<Message[]>(messsageList);
+  const [messages, setMessages] = useState<Message[]>(unsortedMsgs);
 
-  const [curMsg, setCurMsg] = useState<string | undefined>("");
+  const [currentText, setCurrentText] = useState<string>("");
 
-  const [postMessage] =
-    useMutation<{ postMessage: PostMessagePayload }>(POST_MESSAGE);
+  const [postMessage] = useMutation<
+    { postMessage: Message },
+    PostMessagePayload
+  >(POST_MESSAGE);
 
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
   useEffect(() => {
-    const localMsg = window.localStorage.getItem("msg") || undefined;
-    setCurMsg(localMsg);
+    const localMsg = window.localStorage.getItem("msg") || "";
+    setCurrentText(localMsg);
   }, []);
 
   useEffect(() => {
     if (!fetchMsgError && !fetchMsgLoading) {
-      const nosorted = [...messsageList];
-      const sortedMsgs = nosorted.sort(
+      const unsorted = [...unsortedMsgs];
+      const sortedMsgs = unsorted.sort(
         (a, b) =>
           new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
       );
       setMessages(sortedMsgs);
     }
-  }, [messsageList, channelId]);
+  }, [unsortedMsgs, channelId]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleUserChange = (user: string) => {
     setCurrentUser(user);
@@ -232,6 +264,8 @@ const Chat = () => {
       : messages[0]?.messageId;
     const moreMessages = await fetchMoreMessages(channelId, messageId, old);
 
+    if (!moreMessages) return;
+
     if (!old) {
       const curMessages = [...messages, ...moreMessages];
       setMessages(curMessages);
@@ -242,19 +276,36 @@ const Chat = () => {
   };
 
   const handleSendClick = async () => {
-    await postMessage({
+    const { data, errors } = await postMessage({
       variables: {
         channelId,
-        text: curMsg,
+        text: currentText,
         userId: currentUser,
       },
       errorPolicy: "all",
     });
+
+    let msg: any = {};
+    msg = {
+      ...data?.postMessage,
+    };
+    // const errors = true;
+    if (errors) {
+      msg.messageId = "temp_1";
+      msg.text = currentText || "";
+      msg.datetime = new Date().toISOString();
+      msg.userId = currentUser;
+      msg.failed = true;
+    }
+
+    setMessages([...messages, msg as Message]);
+    setCurrentText("");
+    window.localStorage.removeItem("msg");
   };
 
-  const handleChange = (text: string) => {
+  const handleTextChange = (text: string) => {
     window.localStorage.setItem("msg", text);
-    setCurMsg(text);
+    setCurrentText(text);
   };
 
   return (
@@ -324,11 +375,40 @@ const Chat = () => {
                       <div className="message-sender">{message.userId}</div>
                     </div>
                     <div className="chat-message">{message.text}</div>
-                    <div className="chat-status">{message.datetime}</div>
+                    <div style={{ display: "flex" }}>
+                      {message.failed
+                        ? [
+                            <span className="chat-status">Error</span>,
+                            <FontAwesomeIcon
+                              icon={faCircleExclamation}
+                              style={{
+                                color: "#b71e3c",
+                                fontSize: "16px",
+                              }}
+                            />,
+                            <div className="chat-hour">
+                              {getHourMinute(new Date(message.datetime))}
+                            </div>,
+                          ]
+                        : [
+                            <span className="chat-status">Sent</span>,
+                            <FontAwesomeIcon
+                              icon={faCheckCircle}
+                              style={{
+                                color: "#9ec94a",
+                                fontSize: "16px",
+                              }}
+                            />,
+                            <div className="chat-hour">
+                              {getHourMinute(new Date(message.datetime))}
+                            </div>,
+                          ]}
+                    </div>
                   </MessageWrapper>
                 </MessageRow>
               );
             })}
+            <div ref={messagesEndRef} />
           </MessageHolder>
           <div>
             <Button
@@ -346,8 +426,8 @@ const Chat = () => {
         </ChatWindow>
         <ChatControlHolder className="message">
           <TextArea
-            onChange={(e) => handleChange(e.target.value)}
-            value={curMsg}
+            onChange={(e) => handleTextChange(e.target.value)}
+            value={currentText}
           />
           <Button onClick={handleSendClick}>
             Send Message
