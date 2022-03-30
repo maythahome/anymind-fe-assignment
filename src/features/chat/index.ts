@@ -33,7 +33,7 @@ export interface PostMessagePayload {
 
 export const POST_MESSAGE = gql`
   mutation postMessage($channelId: String!, $text: String!, $userId: String!) {
-    postMessages(channelId: $channelId, text: $text, userId: $userId) {
+    postMessage(channelId: $channelId, text: $text, userId: $userId) {
       messageId
       datetime
       text

@@ -164,6 +164,10 @@ const Button = styled.button({
   color: "#FFF",
   border: "none",
   borderRadius: "4px",
+  cursor: "pointer",
+  ":hover": {
+    backgroundColor: "#138496",
+  },
 });
 
 const MessageWrapper = styled.div({
@@ -181,6 +185,7 @@ const Chat = () => {
   const [currentUser, setCurrentUser] = useState<string>("Joyse");
   const [channelId, setChannelId] = useState<string>("General");
   const {
+    loading: fetchMsgLoading,
     error: fetchMsgError,
     data: { fetchLatestMessages: messsageList = [] } = {},
   } = useQuery<FetchLatestMessagesData, FetchLatestMessagesVars>(
@@ -191,11 +196,18 @@ const Chat = () => {
   );
   const [messages, setMessages] = useState<Message[]>(messsageList);
 
-  const [postMessage, { error }] =
+  const [curMsg, setCurMsg] = useState<string | undefined>("");
+
+  const [postMessage] =
     useMutation<{ postMessage: PostMessagePayload }>(POST_MESSAGE);
-  console.log(error);
+
   useEffect(() => {
-    if (!fetchMsgError) {
+    const localMsg = window.localStorage.getItem("msg") || undefined;
+    setCurMsg(localMsg);
+  }, []);
+
+  useEffect(() => {
+    if (!fetchMsgError && !fetchMsgLoading) {
       const nosorted = [...messsageList];
       const sortedMsgs = nosorted.sort(
         (a, b) =>
@@ -229,20 +241,20 @@ const Chat = () => {
     setMessages(curMessages);
   };
 
-  const handleMsgSend = (e: React.SyntheticEvent) => {
-    e.preventDefault();
-    const target = e.target as typeof e.target & {
-      msg: { value: string };
-    };
-    const msg = target.msg.value;
-    postMessage({
+  const handleSendClick = async () => {
+    await postMessage({
       variables: {
         channelId,
-        text: msg,
+        text: curMsg,
         userId: currentUser,
       },
       errorPolicy: "all",
     });
+  };
+
+  const handleChange = (text: string) => {
+    window.localStorage.setItem("msg", text);
+    setCurMsg(text);
   };
 
   return (
@@ -292,12 +304,12 @@ const Chat = () => {
             </Button>
           </div>
           <MessageHolder>
-            {messages?.map((message: Message) => {
+            {messages?.map((message: Message, index) => {
               const isRight = message.userId === currentUser;
               return (
                 <MessageRow
                   messageRight={isRight}
-                  key={`message_${message.messageId}`}
+                  key={`message_${message.messageId}_${index}`}
                 >
                   <MessageWrapper
                     className={`message-${isRight ? "right" : "left"}`}
@@ -333,16 +345,17 @@ const Chat = () => {
           </div>
         </ChatWindow>
         <ChatControlHolder className="message">
-          <form onSubmit={handleMsgSend}>
-            <TextArea name="msg" />
-            <Button type="submit">
-              Send Message
-              <FontAwesomeIcon
-                icon={faPaperPlane}
-                style={{ marginLeft: "8px" }}
-              />
-            </Button>
-          </form>
+          <TextArea
+            onChange={(e) => handleChange(e.target.value)}
+            value={curMsg}
+          />
+          <Button onClick={handleSendClick}>
+            Send Message
+            <FontAwesomeIcon
+              icon={faPaperPlane}
+              style={{ marginLeft: "8px" }}
+            />
+          </Button>
         </ChatControlHolder>
       </ChatRightSide>
     </ChatBody>
