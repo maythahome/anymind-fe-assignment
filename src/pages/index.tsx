@@ -1,7 +1,7 @@
 import type { NextPage } from "next";
 import Head from "next/head";
 import styled from "@emotion/styled";
-import Chat from "components/Chat";
+import ChatBox from "components/Chat/ChatBox";
 
 const PageContainer = styled.div({
   minHeight: "100vh",
@@ -11,13 +11,13 @@ const PageContainer = styled.div({
   flexDirection: "column",
 });
 
-const ChatWrapper = styled.div({
+const Wrapper = styled.div({
   display: "flex",
   width: "100%",
   flexWrap: "wrap",
 });
 
-const ChatHeader = styled.div({
+const Header = styled.div({
   width: "100%",
   h5: {
     fontSize: "1.25rem",
@@ -36,13 +36,13 @@ const Home: NextPage = () => {
         <title>1 Day chat app</title>
       </Head>
 
-      <ChatWrapper className="wrapper">
-        <ChatHeader>
+      <Wrapper>
+        <Header>
           <h5>1 day chat App</h5>
           <p>All messages will be deleted at every 00:00 UTC</p>
-        </ChatHeader>
-        <Chat />
-      </ChatWrapper>
+        </Header>
+        <ChatBox />
+      </Wrapper>
     </PageContainer>
   );
 };

@@ -1,6 +1,6 @@
 import { gql, client } from "features/index";
 
-export interface Message {
+export interface MessageDetail {
   messageId: string;
   text: string;
   datetime: string;
@@ -9,7 +9,7 @@ export interface Message {
 }
 
 export interface FetchLatestMessagesData {
-  fetchLatestMessages: Message[];
+  fetchLatestMessages: MessageDetail[];
 }
 export interface FetchLatestMessagesVars {
   channelId: string;
