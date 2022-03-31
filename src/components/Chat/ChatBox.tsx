@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "features/index";
 import {
+  ChanelId,
   FetchLatestMessagesData,
   FetchLatestMessagesVars,
   fetchMoreMessages,
@@ -7,6 +8,7 @@ import {
   MessageDetail,
   PostMessagePayload,
   POST_MESSAGE,
+  UserId,
 } from "features/chat";
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -30,12 +32,13 @@ import {
   Select,
   TextArea,
 } from "./styles";
+import findLast from "lodash/findLast";
 
 const ChatBox = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesStartRef = useRef<HTMLDivElement>(null);
-  const [currentUser, setCurrentUser] = useState<string>("Joyse");
-  const [channelId, setChannelId] = useState<string>("General");
+  const [currentUser, setCurrentUser] = useState<UserId>("Joyse");
+  const [channelId, setChannelId] = useState<ChanelId>("General");
   const [currentText, setCurrentText] = useState<string>("");
   const [scrollTop, setScrollTop] = useState<boolean>(false);
 
@@ -92,20 +95,35 @@ const ChatBox = () => {
     }
   }, [messages]);
 
-  const handleUserChange = (user: string) => {
+  const handleUserChange = (user: UserId) => {
     setCurrentUser(user);
   };
 
-  const handleChannelClick = (channelId: string) => {
+  const handleChannelClick = (channelId: ChanelId) => {
     setChannelId(channelId);
+  };
+
+  const findLatestMessageId = (messageList: MessageDetail[]) => {
+    console.log(
+      findLast(messageList, (m: MessageDetail) => m.failed === undefined)
+    );
+    const lastestSuccessMsg = findLast(
+      messageList,
+      (m: MessageDetail) => m.failed === undefined
+    );
+    return lastestSuccessMsg?.messageId;
   };
 
   const handleReadMoreClick = async (old: boolean) => {
     if (messages.length === 0) return;
-    const messageId = !old
-      ? messages[messages.length - 1].messageId
-      : messages[0]?.messageId;
+
+    const messageId = old
+      ? messages[0].messageId
+      : findLatestMessageId(messages);
+    if (!messageId) return;
+
     const moreMessages = await fetchMoreMessages(channelId, messageId, old);
+
     if (!moreMessages) return;
 
     if (old) {
@@ -115,10 +133,16 @@ const ChatBox = () => {
     const sorted = unsort.sort(
       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
-    const curMessages = old
+    const updatedMessages = old
       ? [...sorted, ...messages]
       : [...messages, ...sorted];
-    setMessages(curMessages);
+
+    setMessages(updatedMessages);
+  };
+
+  const handleTextChange = (text: string) => {
+    window.localStorage.setItem("msg", text);
+    setCurrentText(text);
   };
 
   const handleSendClick = async () => {
@@ -148,16 +172,11 @@ const ChatBox = () => {
     window.localStorage.removeItem("msg");
   };
 
-  const handleTextChange = (text: string) => {
-    window.localStorage.setItem("msg", text);
-    setCurrentText(text);
-  };
-
   return (
     <ChatBody className="body" key={"chat_body"}>
       <ChatSideNav className="chat-side-nav">
         <ChatSideNavMenu>1. Choose your user</ChatSideNavMenu>
-        <Select onChange={(e) => handleUserChange(e.target.value)}>
+        <Select onChange={(e) => handleUserChange(e.target.value as UserId)}>
           <option value="Joyse"> Joyse </option>
           <option value="Sam"> Sam </option>
           <option value="Russell"> Russell </option>
@@ -207,7 +226,7 @@ const ChatBox = () => {
                 <Message
                   message={message}
                   isRight={isRight}
-                  key={`message_${message.messageId}`}
+                  key={`message_${message.messageId}_${index}`}
                 />
               );
             })}

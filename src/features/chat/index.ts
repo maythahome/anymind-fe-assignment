@@ -1,10 +1,12 @@
 import { gql, client } from "features/index";
 
+export type UserId = "Joyse" | "Sam" | "Russel";
+export type ChanelId = "General" | "Technology" | "LGTM";
 export interface MessageDetail {
   messageId: string;
   text: string;
   datetime: string;
-  userId: string;
+  userId: UserId;
   failed?: boolean;
 }
 
@@ -12,7 +14,7 @@ export interface FetchLatestMessagesData {
   fetchLatestMessages: MessageDetail[];
 }
 export interface FetchLatestMessagesVars {
-  channelId: string;
+  channelId: ChanelId;
 }
 
 export const GET_LATEST_MESSAGES = gql`
@@ -27,9 +29,9 @@ export const GET_LATEST_MESSAGES = gql`
 `;
 
 export interface PostMessagePayload {
-  channelId: string;
+  channelId: ChanelId;
   text: string;
-  userId: string;
+  userId: UserId;
 }
 
 export const POST_MESSAGE = gql`

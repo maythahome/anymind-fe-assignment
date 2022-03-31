@@ -21,7 +21,7 @@ const MessageStatus = ({ failed }: { failed: boolean | undefined }) => {
   if (failed) {
     return (
       <>
-        <span className="chat-status">Error</span>,
+        <span className="chat-status">Error</span>
         <FontAwesomeIcon
           icon={faCircleExclamation}
           style={{
