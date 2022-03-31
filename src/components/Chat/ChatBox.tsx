@@ -104,9 +104,6 @@ const ChatBox = () => {
   };
 
   const findLatestMessageId = (messageList: MessageDetail[]) => {
-    console.log(
-      findLast(messageList, (m: MessageDetail) => m.failed === undefined)
-    );
     const lastestSuccessMsg = findLast(
       messageList,
       (m: MessageDetail) => m.failed === undefined
